@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
-//#include "quickselect.h"
+
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
 
@@ -211,7 +211,7 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
 
 
     p->inner = cilk_spawn recBuild(Xinner, innerIdx, numberOfInner, d);
-    p->outer =  recBuild(Xouter, outerIdx, numberOfOuter, d);
+    p->outer = cilk_spawn recBuild(Xouter, outerIdx, numberOfOuter, d);
 
   cilk_sync;
 

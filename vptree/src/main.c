@@ -175,11 +175,15 @@ int verifyTree(vptree *T, double *vp, node **stack, double md, int isInner,
 
   // update list of indices
   int idx = getIDX(T);
+  //printf("MPHKAAAA >>IDX: %d,  MD: %lf\n", idx, getMD(T));
   if (idx < n){
     foundInTree[ idx ] = 1;
+    //printf("MPHKAAAA >>IDX: %d,  MD: %lf\n", idx, getMD(T));
   }
-
-
+  if (idx > n){
+    //printf("MPHKAAAA >>IDX: %d,  MD: %lf\n", idx, getMD(T));
+    printf("MPHKAAAA >>IDX: %d,  MD: %lf\n", idx, getMD(T));
+  }
 
   // validate distance to parent
   if (isInner)
@@ -220,10 +224,8 @@ int verifyTree(vptree *T, double *vp, node **stack, double md, int isInner,
 int main()
 {
 
-  int n=1000000;//data
-  int d=20;//dimensions
-
-  srand(time(NULL));
+  int n=100;//data
+  int d=4;//dimensions
 
   double  * dataArr = (double * ) malloc( n*d * sizeof(double) );
   double  * zeros   = (double * ) calloc( d   , sizeof(double) );

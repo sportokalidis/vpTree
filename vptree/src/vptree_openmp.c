@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
-#include "quickselect.h"
+
 
 #include <omp.h>
 
@@ -217,7 +217,6 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
 
   #pragma omp task shared(p)
     p->outer =  recBuild(Xouter, outerIdx, numberOfOuter, d);
-  #pragma omp_taskwait
 
   return p;
 }

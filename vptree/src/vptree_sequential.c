@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
-//#include "quickselect.h"
+
 
 //
 // #define N 1000000
@@ -150,11 +150,12 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
   //Calculating the distance
   //TO BE parallel
 
-  for(int i =0; i < n-1; i++){
+  for(int i =0; i < n; i++){
     distance[i]=distanceCalculation((X + i * d),p->vp,n,d);
   }
   // distance = distanceCalculation(X, p->vp, n, d);
   median = qselect(distance, n - 1, (int)((n - 2) / 2));
+
   p->md = median;
 
   numberOfOuter = (int)((n - 1) / 2);
