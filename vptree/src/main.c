@@ -13,6 +13,9 @@
 #include <math.h>
 #include <assert.h>
 #include "vptree.h"
+#include <sys/time.h>
+
+struct timeval startwtime, endwtime;
 
 /* #define VERBOSE */
 
@@ -180,10 +183,6 @@ int verifyTree(vptree *T, double *vp, node **stack, double md, int isInner,
     foundInTree[ idx ] = 1;
     //printf("MPHKAAAA >>IDX: %d,  MD: %lf\n", idx, getMD(T));
   }
-  if (idx > n){
-    //printf("MPHKAAAA >>IDX: %d,  MD: %lf\n", idx, getMD(T));
-    printf("MPHKAAAA >>IDX: %d,  MD: %lf\n", idx, getMD(T));
-  }
 
   // validate distance to parent
   if (isInner)
@@ -224,8 +223,8 @@ int verifyTree(vptree *T, double *vp, node **stack, double md, int isInner,
 int main()
 {
 
-  int n=100;//data
-  int d=4;//dimensions
+  int n=1000000;//data
+  int d=10;//dimensions
 
   double  * dataArr = (double * ) malloc( n*d * sizeof(double) );
   double  * zeros   = (double * ) calloc( d   , sizeof(double) );
@@ -237,8 +236,12 @@ int main()
       //printf("dataArr[%d]: %lf\n", i,dataArr[i]);
   }
 
-
+gettimeofday (&startwtime, NULL);
   vptree *root=buildvp(dataArr,n,d);
+  gettimeofday (&endwtime, NULL);
+
+  double exec_time = (double)((endwtime.tv_usec - startwtime.tv_usec)/1.0e6  + endwtime.tv_sec - startwtime.tv_sec);
+  printf("Time for calculation is : %lf,   \n", exec_time);
 
   node *stack = NULL;
 

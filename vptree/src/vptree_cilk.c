@@ -1,48 +1,28 @@
+/**
+* FILE: vptree_pthreads.c
+* THMMY, 7th semester, Parallel and Distributed Systems: 1st assignment
+* Parallel implementation of vantage point tree
+* Authors:
+*   Portokalidis Stavros, 9334, stavport@auth.gr
+*   Moustaklis Apostolos, 9127, amoustakl@auth.gr
+* Compile command with :
+*   make vptree_pthreads
+* Run command example:
+*   ./vptree_pthreads
+* It will create the tree given N points with D dimensions
+* return a vptree struct and check it's validity
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
-
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
+#include <sys/time.h>
+#include "vptree.h"
 
-
-
-// #define N 1000000
-// #define D 4
-
-
-typedef struct vptree {
-  double * vp; //vantage
-  double md; //median distance
-  int idxVp; //the index of the vantage point in the original set
-  struct vptree * inner;
-  struct vptree * outer;
-} vptree;
-
-
-
-double * generate_points(int n, int d) {
-
-  srand(time(NULL));
-
-  double * points = (double * ) malloc(n * d * sizeof(double));
-
-  for (int i = 0; i < n*d; i++) {
-      points[i] = (double) rand() / RAND_MAX;
-    }
-
-  return points;
-}
-
-
-
-
-
-
-
-
-
+struct timeval startwtime, endwtime;
 
 
 double qselect(double *v, int len, int k)
@@ -64,26 +44,6 @@ double qselect(double *v, int len, int k)
 			:st > k	? qselect(tArray, st, k)
 				: qselect(tArray + st, len - st, k - st);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 double  distanceCalculation(double * X, double * Y, int n, int d) {
@@ -144,7 +104,7 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
   vptree *p = (vptree * ) malloc(sizeof(vptree));
   int numberOfOuter = 0;
   int numberOfInner = 0;
-  double  *distance = (double * ) calloc(n - 1, sizeof(double));
+
 
   double median;
   double * Xinner = NULL;
@@ -162,12 +122,25 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
     }
     if(n == 0)
       return NULL;
-  setTree(p,X,idx,n,d);
 
+  setTree(p,X,idx,n,d);
+  double  *distance = (double * ) calloc(n - 1, sizeof(double));
+
+//  gettimeofday (&startwtime, NULL);
+if(n<250000){
+  for(int i =0; i < n-1; i++){
+    distance[i]=distanceCalculation((X + i * d),p->vp,n,d);
+  }
+ }
+else{
   cilk_for (int i = 0; i < n-1; i++){
     distance[i]=distanceCalculation((X + i * d),p->vp,n,d);
   }
-  // distance = distanceCalculation(X, p->vp, n, d);
+}
+//  gettimeofday (&endwtime, NULL);
+
+//  double exec_time = (double)((endwtime.tv_usec - startwtime.tv_usec)/1.0e6  + endwtime.tv_sec - startwtime.tv_sec);
+  //  printf("Time for calculation is : %lf,   \n", exec_time);
   median = qselect(distance, n - 1, (int)((n - 2) / 2));
 
   p->md = median;
@@ -185,7 +158,7 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
   }
 
   createNewX( Xinner , Xouter , X , idx ,  innerIdx , outerIdx ,n , d , distance , median);
-
+  free(distance);
   //
   // printf("NEW vptree NODE\n----------------\n\n");
   // for (int i = 0; i < n; i++) {
@@ -207,13 +180,12 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
   // printSubTree(Xouter , numberOfOuter , d);
 
 
-//TO BE PARALLEL
 
 
-    p->inner = cilk_spawn recBuild(Xinner, innerIdx, numberOfInner, d);
-    p->outer = cilk_spawn recBuild(Xouter, outerIdx, numberOfOuter, d);
+  p->inner = cilk_spawn recBuild(Xinner, innerIdx, numberOfInner, d);
 
-  cilk_sync;
+  p->outer = recBuild(Xouter, outerIdx, numberOfOuter, d);
+
 
   return p;
 }

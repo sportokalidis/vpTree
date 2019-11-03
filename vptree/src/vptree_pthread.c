@@ -1,72 +1,59 @@
-/**
-* FILE: vptree_pthreads.c
-* THMMY, 7th semester, Parallel and Distributed Systems: 1st assignment
-* Parallel implementation of vantage point tree
-* Authors:
-*   Moustaklis Apostolos, 9127, amoustakl@auth.gr
-*   Portokalidis Stavros, 9334, stavport@auth.gr
-* Compile command with :
-*   make vptree_pthreads
-* Run command example:
-*   ./vptree_pthreads
-* It will create the tree given N points with D dimensions
-* return a vptree struct and check it's validity
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
 #include <pthread.h>
-#include <sys/time.h>
-#include "vptree.h"
-
-#define MAX_THREADS 2
+#include "quickselect.h"
+//subnodes
+#define MAX_THREADS 6
+//distance calculation
 #define NOTHREADS 4
 
-struct timeval startwtime, endwtime;
+#define N 1000000
+#define D 2
+
+typedef struct vptree {
+  double *vp; //vantage
+  double md; //median distance
+  int idxVp; //the index of the vantage point in the original set
+  struct vptree * inner;
+  struct vptree * outer;
+} vptree;
 
 typedef struct param {
-  int * counter; //local node counter to associate max threads per level
-  double * data; // the data of the points
-  int * idx; // indexes of the points in the set
-  int n; // N number of points
-  int d; // D number of dimensions
-  double *distances; //the distances from the vantage point
+  double * data;
+  int * idx;
+  int n;
+  int d;
+  double *distances;
 } param;
 
-int nodesMade = 0;
 
 
 pthread_mutex_t mux;
 pthread_attr_t attr;
 volatile int activeThreads = 0;
 
+
+
 volatile int threadCounter = -1;
+pthread_mutex_t mux;
 pthread_mutex_t mux1;
 pthread_attr_t attr;
 
+double * generate_points(int n, int d) {
 
-double qselect(double *v, int len, int k)
-{
-	#	define SWAP(a, b) { tmp = tArray[a]; tArray[a] = tArray[b]; tArray[b] = tmp; }
-	int i, st;
-	double tmp;
-	double * tArray = (double * ) malloc(len * sizeof(double));
-	for(int i=0; i<len; i++){
-		tArray[i] = v[i];
-	}
-	for (st = i = 0; i < len - 1; i++) {
-		if (tArray[i] > tArray[len-1]) continue;
-		SWAP(i, st);
-		st++;
-	}
-	SWAP(len-1, st);
-	return k == st	? tArray[st]
-			:st > k	? qselect(tArray, st, k)
-				: qselect(tArray + st, len - st, k - st);
+  srand(time(NULL));
+
+  double * points = (double * ) malloc(n * d * sizeof(double));
+
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < d; j++) {
+      *(points + i * d + j) = (double) rand() / RAND_MAX;
+    }
+  }
+  return points;
 }
-
 
 double  distanceCalculation(double * X, double * Y, int n, int d) {
     double dist2 = 0;
@@ -76,6 +63,7 @@ double  distanceCalculation(double * X, double * Y, int n, int d) {
     return sqrt(dist2);
 }
 
+
 void * distanceCalculationPar(void *data) {
   param *localDist= (param *) data;
   int i,j,start,end,iterations=0 , lastIt;
@@ -84,16 +72,15 @@ void * distanceCalculationPar(void *data) {
   int localThreadCounter = 0 ;
 
   pthread_mutex_lock(&mux);
-  if (*(localDist->counter)==-1 || *(localDist->counter)==NOTHREADS-1){
-    *(localDist->counter)=0;
-    localThreadCounter = *(localDist->counter);
+  if (threadCounter==-1 || threadCounter==NOTHREADS-1){
+    threadCounter=0;
+    localThreadCounter = threadCounter;
   }
-  else if(*(localDist->counter)<NOTHREADS-1){
-    (*(localDist->counter))++;
-    localThreadCounter = *(localDist->counter);
+  else if(threadCounter<NOTHREADS-1){
+    threadCounter++;
+    localThreadCounter = threadCounter;
   }
   pthread_mutex_unlock(&mux);
-
 
   if((localDist->n-1)%NOTHREADS ==0){
     iterations = ((localDist->n)/NOTHREADS);
@@ -119,13 +106,13 @@ void * distanceCalculationPar(void *data) {
 
   for (i=start; i<end; i++){
     for(j=0; j<localDist->d; j++){
-      sumDist= sumDist + (*(localDist->data + (localDist->n-1)*localDist->d + j) - *(localDist->data + i*localDist->d + j)) * (*(localDist->data + (localDist->n-1)*localDist->d + j) - *(localDist->data + i*localDist->d + j));
+      sumDist= sumDist + (*(localDist->data + (localDist->n)*localDist->d + j) - *(localDist->data + i*localDist->d + j)) * (*(localDist->data + (localDist->n)*localDist->d + j) - *(localDist->data + i*localDist->d + j));
     }
     localDist->distances[i]=sqrt(sumDist);
   //  printf("THE DISTANCES IS :  %lf \n" , localDist->distances[i]);
     sumDist =0;
   }
-return NULL;
+  return NULL;
 }
 
 void * recBuild(void * arg) {
@@ -135,7 +122,7 @@ void * recBuild(void * arg) {
 
     if (x->n == 1){
       p->vp = x->data;
-      p->idxVp=x->idx[0];
+      p->idxVp=x->idx[x->n-1];
       p->md=0;
       p->inner=NULL;
       p->outer=NULL;
@@ -144,8 +131,6 @@ void * recBuild(void * arg) {
     if(x->n == 0)
       return NULL;
 
-  int localCounter = -1;
-  x->counter = &localCounter;
   x->distances = (double * )calloc(x->n - 1, sizeof(double));
 
 
@@ -175,17 +160,14 @@ void * recBuild(void * arg) {
   p->idxVp = x->idx[x->n-1];
 
 
-pthread_mutex_lock(&mux1);
-nodesMade++;
-pthread_mutex_unlock(&mux1);
+
 //THRESHOLD TO GO SERIAL
-   if(x->n<25000){
+   if(x->n<300000){
      for(int i = 0; i < x->n-1; i++){
        x->distances[i]=distanceCalculation((x->data + i * x->d),p->vp,x->n,x->d);
     }
   }
     else{
-    //  gettimeofday (&startwtime, NULL);
       //PTHREADS
       for(int i=0; i<NOTHREADS; i++){
         pthread_create(&thr[i], &attr, distanceCalculationPar, (void *)x);
@@ -193,18 +175,22 @@ pthread_mutex_unlock(&mux1);
       for(int i=0; i<NOTHREADS; i++){
         pthread_join(thr[i],NULL);
       }
-    //  gettimeofday (&endwtime, NULL);
     }
 
-    //double exec_time = (double)((endwtime.tv_usec - startwtime.tv_usec)/1.0e6  + endwtime.tv_sec - startwtime.tv_sec);
-    //  printf("Time for calculation is : %lf,   \n", exec_time);
   median = qselect(x->distances, x->n - 1, (int)((x->n - 2) / 2));
   p->md = median;
 
+  for(int i=0; i<x->n-1; i++){
+    if(x->distances[i]<=median){
+      numberOfInner++;
+    }
+    else{
+      numberOfOuter++;
+    }
+  }
 
-
-  numberOfOuter = (int)((x->n - 1) / 2);
-  numberOfInner = x->n - 1 - numberOfOuter;
+  //numberOfOuter = (int)((x->n - 1) / 2);
+  //numberOfInner = x->n - 1 - numberOfOuter;
 
   if (numberOfInner != 0) {
     Xinner = (double * ) malloc(numberOfInner * x->d * sizeof(double));
@@ -235,12 +221,12 @@ pthread_mutex_unlock(&mux1);
 
   // pthread_mutex_lock(&mux);
   // printf("NEW vptree NODE\n----------------\n\n");
-  // for (int i = 0; i < x->n; i++) {
-  //   printf("POINT NO.%d: (", x->idx[i]);
-  //   for (int j = 0; j < x->d; j++) {
-  //     printf("%lf, ", *(x->data + i * x->d + j));
+  // for (int i = 0; i < n; i++) {
+  //   printf("POINT NO.%d: (", idx[i]);
+  //   for (int j = 0; j < d; j++) {
+  //     printf("%lf, ", *(X + i * d + j));
   //   }
-  //   if (i < x->n - 1) {
+  //   if (i < n - 1) {
   //     printf("), Distance from Vantage Point: %lf\n", x->distances[i]);
   //   } else {
   //     printf("), VANTAGE POINT\n");
@@ -249,8 +235,8 @@ pthread_mutex_unlock(&mux1);
   // printf("MEDIAN : %lf \n\n", median);
   // printf("->XINNER  :\n");
   // for (int i = 0; i < inCounter; i++) {
-  //   for (int j = 0; j < x->d; j++) {
-  //     printf("  %8.6lf ", *(Xinner + i * x->d + j));
+  //   for (int j = 0; j < d; j++) {
+  //     printf("  %8.6lf ", *(Xinner + i * d + j));
   //   }
   // printf("\n");
   // }
@@ -260,14 +246,14 @@ pthread_mutex_unlock(&mux1);
   //   printf("  NULL\n");
   // } else
   // for (int i = 0; i < outCounter; i++) {
-  //   for (int j = 0; j < x->d; j++) {
-  //     printf("  %8.6lf ", *(Xouter + i * x->d + j));
+  //   for (int j = 0; j < d; j++) {
+  //     printf("  %8.6lf ", *(Xouter + i * d + j));
   //   }
   //   printf("\n");
   // }
   // printf("\n");
   // pthread_mutex_unlock(&mux);
-  //
+
   if (activeThreads < MAX_THREADS) {
     pthread_mutex_lock (&mux);
     activeThreads += 2;
@@ -310,7 +296,6 @@ pthread_mutex_unlock(&mux1);
     }
   }
 
-
   // free(a);
   // free(b);
   // free(idxInner);
@@ -332,7 +317,6 @@ vptree * buildvp(double *X, int n, int d){
    parametr.d = d;
    parametr.idx = idx;
    parametr.distances=NULL;
-   parametr.counter =NULL;
 
    return (vptree *)recBuild(&parametr);
 

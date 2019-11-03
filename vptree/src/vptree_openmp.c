@@ -1,45 +1,24 @@
+/**
+* FILE: vptree_pthreads.c
+* THMMY, 7th semester, Parallel and Distributed Systems: 1st assignment
+* Parallel implementation of vantage point tree
+* Authors:
+*   Portokalidis Stavros, 9334, stavport@auth.gr
+*   Moustaklis Apostolos, 9127, amoustakl@auth.gr
+* Compile command with :
+*   make vptree_pthreads
+* Run command example:
+*   ./vptree_pthreads
+* It will create the tree given N points with D dimensions
+* return a vptree struct and check it's validity
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
-
-
 #include <omp.h>
-
-// #define N 20
-// #define D 2
-
-
-typedef struct vptree {
-  double * vp; //vantage
-  double md; //median distance
-  int idxVp; //the index of the vantage point in the original set
-  struct vptree * inner;
-  struct vptree * outer;
-} vptree;
-
-
-
-double * generate_points(int n, int d) {
-
-  srand(time(NULL));
-
-
-  double * points = (double * ) malloc(n * d * sizeof(double));
-
-  for (int i = 0; i < n*d; i++) {
-      points[i] = (double) rand() / RAND_MAX;
-  }
-
-  return points;
-}
-
-
-
-
-
-
-
+#include "vptree.h"
 
 
 double qselect(double *v, int len, int k)
@@ -61,25 +40,6 @@ double qselect(double *v, int len, int k)
 			:st > k	? qselect(tArray, st, k)
 				: qselect(tArray + st, len - st, k - st);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 double  distanceCalculation(double * X, double * vp, int n, int d) {
@@ -138,7 +98,7 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
   vptree *p = (vptree * ) malloc(sizeof(vptree));
   int numberOfOuter = 0;
   int numberOfInner = 0;
-  double  *distance = (double * ) calloc(n - 1, sizeof(double));
+
 
   double median;
   double * Xinner = NULL;
@@ -158,15 +118,21 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
     return NULL;
 
   setTree(p,X,idx,n,d);
-
-#pragma omp parallel for  schedule(static,4) num_threads (2)//schedule(static,250000) num_threads(8)
+  double  *distance = (double * ) calloc(n - 1, sizeof(double));
+if(n<250000){
+  for(int i =0; i < n-1; i++){
+    distance[i]=distanceCalculation((X + i * d),p->vp,n,d);
+  }
+}
+else{
+#pragma omp parallel for  schedule(static) num_threads (4)
   for (int i = 0; i < n-1; i++)
   {
     distance[i]=distanceCalculation((X + i * d),p->vp,n,d);
   }
-  // distance = distanceCalculation(X, p->vp, n, d);
-  median = qselect(distance, n - 1, (int)((n - 2) / 2));
+}
 
+  median = qselect(distance, n - 1, (int)((n - 2) / 2));
   p->md = median;
 
 
@@ -183,7 +149,9 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
   }
 
   createNewX( Xinner , Xouter , X , idx ,  innerIdx , outerIdx ,n , d , distance , median);
-//
+  free(distance);
+
+
 //   printf("NEW vptree NODE\n----------------\n\n");
 //   for (int i = 0; i < n; i++) {
 //     printf("POINT NO.%d: (", idx[i]);
@@ -210,13 +178,25 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
 // p->inner =  recBuild(Xinner, innerIdx, numberOfInner, d);
 // p->outer =  recBuild(Xouter, outerIdx, numberOfOuter, d);
 // #pragma omp taskwait
+    #pragma omp parallel
+    {
+      #pragma omp sections
+      {
+        #pragma omp section
+        {
 
+         p->inner =  recBuild(Xinner, innerIdx, numberOfInner, d);
 
-  #pragma omp task shared(p)
-    p->inner =  recBuild(Xinner, innerIdx, numberOfInner, d);
+        }
 
-  #pragma omp task shared(p)
-    p->outer =  recBuild(Xouter, outerIdx, numberOfOuter, d);
+        #pragma omp section
+        {
+
+          p->outer =  recBuild(Xouter, outerIdx, numberOfOuter, d);
+
+        }
+      }
+    }
 
   return p;
 }
