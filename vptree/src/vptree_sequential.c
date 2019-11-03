@@ -1,7 +1,7 @@
-/**
+/*
 * FILE: vptree_sequential.c
 * THMMY, 7th semester, Parallel and Distributed Systems: 1st assignment
-* Parallel implementation of vantage point tree
+* Sequential implementation of vantage point tree
 * Authors:
 *   Moustaklis Apostolos, 9127, amoustakl@auth.gr
 *   Portokalidis Stavros, 9334, stavport@auth.gr
@@ -19,32 +19,27 @@
 #include <math.h>
 #include "vptree.h"
 
-
+//Function declarations
 double qselect(double *v, int len, int k);
-
 double  distanceCalculation(double * X, double * Y, int n, int d);
-
 void setTree(vptree *tree , double * X , int *idx ,  int n , int d );
-
 void printFam(double *X,int *idx , double * Xinner ,int  numberOfInner ,double * Xouter ,
               int  numberOfOuter ,double * distance ,int  n ,int  d ,int idxVp , double median);
-
 void createNewX(double * Xinner , double * Xouter , double * X ,int *idx ,
                 int *innerIdx , int *outerIdx , int n , int d , double * distance , double median);
 
 
-
+//Recursive build function
 vptree * recBuild(double * X, int * idx, int n, int d) {
 
   vptree *p = (vptree * ) malloc(sizeof(vptree));
-  int numberOfOuter = 0;
-  int numberOfInner = 0;
-
-  double median;
-  double * Xinner = NULL;
-  double * Xouter = NULL;
-  int * innerIdx = NULL;
-  int * outerIdx = NULL;
+  int numberOfOuter = 0; //Number of points in the outer set
+  int numberOfInner = 0; //NUmber of points in the inner set
+  double median; // The median of the vantage point
+  double * Xinner = NULL; //Inner subtree
+  double * Xouter = NULL; //Outer subtree
+  int * innerIdx = NULL; //Inner indexes
+  int * outerIdx = NULL; //Outer indexes
 
     if (n == 1){
       p->vp=X;
@@ -64,7 +59,7 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
   for(int i =0; i < n; i++){
     distance[i]=distanceCalculation((X + i * d),p->vp,n,d);
   }
-  // distance = distanceCalculation(X, p->vp, n, d);
+
   median = qselect(distance, n - 1, (int)((n - 2) / 2));
 
   p->md = median;
@@ -72,6 +67,7 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
   numberOfOuter = (int)((n - 1) / 2);
   numberOfInner = n - 1 - numberOfOuter;
 
+//Allocating memory for the subtrees
   if (numberOfInner != 0) {
     Xinner = (double * ) malloc(numberOfInner * d * sizeof(double));
     innerIdx = (int *) malloc(numberOfInner * sizeof(int));
@@ -83,11 +79,10 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
 
   createNewX( Xinner , Xouter , X , idx ,  innerIdx , outerIdx ,n , d , distance , median);
 
-
+//Helper function to print everything
   //printFam(X, idx ,  Xinner , numberOfInner , Xouter , numberOfOuter ,  distance , n , d ,p->idxVp , median );
 
 
-  //TO BE PARALLEL
   if (Xinner != NULL) {
     p->inner = recBuild(Xinner, innerIdx, numberOfInner, d);
   }
@@ -98,7 +93,7 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
   return p;
 }
 
-
+// ======= LIST OF ACCESSORS ======= //
 vptree * buildvp(double * X, int n, int d) {
 
   int * idx = (int *) malloc(n * sizeof(int));
@@ -126,7 +121,7 @@ double getMD(vptree * T) {
 int getIDX(vptree * T) {
   return T->idxVp;
 }
-
+// ======= HELPER FUNCTIONS ======= //
 double qselect(double *v, int len, int k)
 {
 	#	define SWAP(a, b) { tmp = tArray[a]; tArray[a] = tArray[b]; tArray[b] = tmp; }
@@ -147,8 +142,6 @@ double qselect(double *v, int len, int k)
 				: qselect(tArray + st, len - st, k - st);
 }
 
-
-
 double  distanceCalculation(double * X, double * Y, int n, int d) {
     double dist2 = 0;
     for (int i = 0; i < d; i++){
@@ -157,7 +150,6 @@ double  distanceCalculation(double * X, double * Y, int n, int d) {
     return sqrt(dist2);
 }
 
-
 void setTree(vptree *tree , double * X , int *idx ,  int n , int d ){
   tree->vp = (double * ) malloc(d * sizeof(double));
   for (int j = 0; j < d; j++) {
@@ -165,7 +157,6 @@ void setTree(vptree *tree , double * X , int *idx ,  int n , int d ){
   }
   tree->idxVp = idx[n-1];
 }
-
 void printSubTree(double *XSubTree ,int Counter , int d){
   if (Counter == 0) {
     printf("  NULL\n");
@@ -179,7 +170,6 @@ void printSubTree(double *XSubTree ,int Counter , int d){
     }
   }
 }
-
 void printFam(double *X,int *idx , double * Xinner ,int  numberOfInner ,double * Xouter ,int  numberOfOuter ,double * distance ,int  n ,int  d ,int idxVp , double median){
   printf("NEW vptree NODE\n----------------\n\n");
   for (int i = 0; i < n; i++) {
@@ -201,10 +191,7 @@ void printFam(double *X,int *idx , double * Xinner ,int  numberOfInner ,double *
   printf("Xouter --->  /n");
   printSubTree(Xouter , numberOfOuter , d);
 
-
 }
-
-
 void createNewX(double * Xinner , double * Xouter , double * X ,int *idx ,  int *innerIdx , int *outerIdx , int n , int d , double * distance , double median){
 
   int inCounter = 0; //number of Inner points//

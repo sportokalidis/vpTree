@@ -6,8 +6,8 @@ typedef struct vptree {
   double * vp; //vantage
   double md; //median distance
   int idxVp; //the index of the vantage point in the original set
-  struct vptree * inner;
-  struct vptree * outer;
+  struct vptree * inner; //the inner vptree
+  struct vptree * outer; //the outer vptree
 } vptree;
 
 

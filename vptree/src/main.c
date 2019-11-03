@@ -6,7 +6,6 @@
   \date   2019-10-19
 */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -224,7 +223,7 @@ int main()
 {
 
   int n=1000000;//data
-  int d=10;//dimensions
+  int d=20;//dimensions
 
   double  * dataArr = (double * ) malloc( n*d * sizeof(double) );
   double  * zeros   = (double * ) calloc( d   , sizeof(double) );
@@ -233,15 +232,15 @@ int main()
 
   for (int i=0;i<n*d;i++){
       dataArr[i]=(double) rand() / RAND_MAX;
-      //printf("dataArr[%d]: %lf\n", i,dataArr[i]);
+
   }
 
-gettimeofday (&startwtime, NULL);
+  gettimeofday (&startwtime, NULL);
   vptree *root=buildvp(dataArr,n,d);
   gettimeofday (&endwtime, NULL);
 
   double exec_time = (double)((endwtime.tv_usec - startwtime.tv_usec)/1.0e6  + endwtime.tv_sec - startwtime.tv_sec);
-  printf("Time for calculation is : %lf,   \n", exec_time);
+  printf("%lf\n", exec_time);
 
   node *stack = NULL;
 
@@ -253,7 +252,6 @@ gettimeofday (&startwtime, NULL);
   for (int i = 0; i<n; i++) {
     if (!foundInTree[i]){
       foundAll = 0;
-      printf("to programa skaei %d\n", i);
       break;
     }
   }
