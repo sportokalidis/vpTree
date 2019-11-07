@@ -41,22 +41,22 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
   int * innerIdx = NULL; //Inner indexes
   int * outerIdx = NULL; //Outer indexes
 
-    if (n == 1){
-      p->vp=X;
-      p->idxVp=idx[0];
-      p->md=0;
-      p->inner=NULL;
-      p->outer=NULL;
-      return p;
-    }
-    if(n == 0)
-      return NULL;
+  if (n == 1){
+    p->vp=X;
+    p->idxVp=idx[0];
+    p->md=0;
+    p->inner=NULL;
+    p->outer=NULL;
+    return p;
+  }
+  if(n == 0)
+    return NULL;
 
-  double  *distance = (double * ) calloc(n - 1, sizeof(double));
+  double  *distance = (double * ) malloc((n -1) *sizeof(double));
   setTree(p,X,idx,n,d);
 
   //Calculating the distance from the vantage point
-  for(int i =0; i < n; i++){
+  for(int i =0; i < n-1; i++){
     distance[i]=distanceCalculation((X + i * d),p->vp,n,d);
   }
 
@@ -67,7 +67,7 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
   numberOfOuter = (int)((n - 1) / 2);
   numberOfInner = n - 1 - numberOfOuter;
 
-//Allocating memory for the subtrees
+  //Allocating memory for the subtrees
   if (numberOfInner != 0) {
     Xinner = (double * ) malloc(numberOfInner * d * sizeof(double));
     innerIdx = (int *) malloc(numberOfInner * sizeof(int));
@@ -79,16 +79,15 @@ vptree * recBuild(double * X, int * idx, int n, int d) {
 
   createNewX( Xinner , Xouter , X , idx ,  innerIdx , outerIdx ,n , d , distance , median);
 
-//Helper function to print everything
-  //printFam(X, idx ,  Xinner , numberOfInner , Xouter , numberOfOuter ,  distance , n , d ,p->idxVp , median );
+  
+  free(X);
+
+  p->inner = recBuild(Xinner, innerIdx, numberOfInner, d);
+
+  p->outer = recBuild(Xouter, outerIdx, numberOfOuter, d);
 
 
-  if (Xinner != NULL) {
-    p->inner = recBuild(Xinner, innerIdx, numberOfInner, d);
-  }
-  if (Xouter != NULL) {
-    p->outer = recBuild(Xouter, outerIdx, numberOfOuter, d);
-  }
+
 
   return p;
 }

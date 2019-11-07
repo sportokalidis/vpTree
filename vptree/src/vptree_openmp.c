@@ -93,6 +93,8 @@ else{
 	//Helper function to print everything
 	//printFam(X, idx ,  Xinner , numberOfInner , Xouter , numberOfOuter ,  distance , n , d ,p->idxVp , median );
   free(distance);
+  free(X);  
+  free(idx);	
 
     #pragma omp parallel
     {

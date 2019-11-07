@@ -150,11 +150,13 @@ pthread_mutex_unlock(&mux1);
       outCounter++;
     }
   }
+
   // pthread_mutex_lock(&mux);
  //printFam(x->data, x->idx ,  Xinner , numberOfInner , Xouter , numberOfOuter ,  x->distances , x->n , x->d ,p->idxVp , median );
 
 
   if (activeThreads < MAX_THREADS) {
+
     pthread_mutex_lock (&mux);
     activeThreads += 2;
     pthread_mutex_unlock (&mux);
@@ -170,6 +172,7 @@ pthread_mutex_unlock(&mux1);
     pthread_create( &th2, &attr, recBuild, (void *)(&outer));
     parallel = 1;
   }
+
   if (parallel) {
     pthread_join(th1,&r1);
     p->inner = (vptree *) r1;
@@ -180,20 +183,21 @@ pthread_mutex_unlock(&mux1);
     pthread_mutex_unlock (&mux);
   }
   else {
-    if (Xinner != NULL) {
+      free(x->data);
+      free(x->idx);
+      free(x->distances);
       inner.data = Xinner;
       inner.n = numberOfInner;
       inner.d = x->d;
       inner.idx = idxInner;
       p->inner = (vptree *)recBuild((void *) &inner);
-    }
-    if (Xouter != NULL) {
+
       outer.data = Xouter;
       outer.n = numberOfOuter;
       outer.d = x->d;
       outer.idx = idxOuter;
       p->outer = (vptree *)recBuild((void *) &outer);
-    }
+
   }
   return (void *)p;
 }
@@ -234,7 +238,6 @@ int getIDX(vptree * T) {
   return T->idxVp;
 }
 // ======= HELPER FUNCTIONS ======= //
-
 double qselect(double *v, int len, int k)
 {
 	#	define SWAP(a, b) { tmp = tArray[a]; tArray[a] = tArray[b]; tArray[b] = tmp; }
@@ -255,6 +258,7 @@ double qselect(double *v, int len, int k)
 				: qselect(tArray + st, len - st, k - st);
 }
 
+
 double  distanceCalculation(double * X, double * Y, int n, int d) {
     double dist2 = 0;
     for (int i = 0; i < d; i++){
@@ -262,9 +266,6 @@ double  distanceCalculation(double * X, double * Y, int n, int d) {
     }
     return sqrt(dist2);
 }
-
-//This functions devides  divides iterations into chunks that are approximately equal in size and it distributes 
-//one chunk to each thread.
 
 void * distanceCalculationPar(void *data) {
   param *localDist= (param *) data;

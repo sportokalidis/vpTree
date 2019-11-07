@@ -162,6 +162,7 @@ int verifyTree(vptree *T, double *vp, node **stack, double md, int isInner,
   if (T == NULL) return isValid;
 
   int isValidAncestor = 1;
+  //printf("memory adress: in: %p, out: %p\n", getInner(T), getOuter(T));
   int isLeaf = (getInner(T) == NULL && getOuter(T) == NULL);
 
 #ifdef VERBOSE
@@ -223,7 +224,7 @@ int main()
 {
 
   int n=1000000;//data
-  int d=20;//dimensions
+  int d=200;//dimensions
 
   double  * dataArr = (double * ) malloc( n*d * sizeof(double) );
   double  * zeros   = (double * ) calloc( d   , sizeof(double) );
